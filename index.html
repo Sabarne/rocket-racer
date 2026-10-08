@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rocket Racer Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: toy-factory workbench. One guided column: build the original (timed) -> redesign with live scoreboard -> build your version (timed) -> report card. */
+:root{
+  --bg:#f3f1ec; --card:#ffffff; --ink:#22252b; --muted:#5d6370; --line:#d9d5cc;
+  --accent:#e0452f; --accent-ink:#ffffff; --plate:#e7f0e4; --plate-dot:#cfe0c9;
+  --good:#23824f; --good-soft:#e0f2e8; --bad:#c0392b; --bad-soft:#fbe3df; --warn:#9a6a00; --warn-soft:#fbefd2;
+  --star:#f2b705;
+  --f-display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17191e; --card:#21242b; --ink:#eceef2; --muted:#a3a9b5; --line:#343842;
+  --accent:#ff6a52; --accent-ink:#1b0c08; --plate:#1f2a22; --plate-dot:#2b3a2e;
+  --good:#5fd08f; --good-soft:#16301f; --bad:#ff8a7c; --bad-soft:#3a1d1a; --warn:#e8b54c; --warn-soft:#33280f;
+  --star:#ffc933; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17191e; --card:#21242b; --ink:#eceef2; --muted:#a3a9b5; --line:#343842;
+  --accent:#ff6a52; --accent-ink:#1b0c08; --plate:#1f2a22; --plate-dot:#2b3a2e;
+  --good:#5fd08f; --good-soft:#16301f; --bad:#ff8a7c; --bad-soft:#3a1d1a; --warn:#e8b54c; --warn-soft:#33280f;
+  --star:#ffc933; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:20px 56px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.05;text-wrap:balance}
+h1{font-size:clamp(2.4rem,7vw,3.6rem);font-weight:800}
+h2{font-size:1.75rem;font-weight:700}
+h3{font-size:1.2rem;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.step{display:flex;gap:12px;align-items:center}
+.step b{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font:800 1.3rem var(--f-display);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px}
+@media (max-width:700px){.hero{grid-template-columns:1fr}}
+.hero .text{display:flex;flex-direction:column;gap:10px}
+.idea{background:var(--plate);border-radius:8px;padding:12px 14px}
+.hero svg{width:100%;height:auto;max-width:100%}
+.fact{border-left:4px solid var(--accent);padding-left:12px;font-size:.95rem}
+
+/* build station */
+.station{display:flex;flex-direction:column;gap:12px}
+.st-top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.st-stats{display:flex;flex-wrap:wrap;gap:8px 18px}
+.st-stats span{display:flex;flex-direction:column}
+.st-stats .v{font:700 1.3rem var(--f-mono);font-variant-numeric:tabular-nums}
+.board{background:var(--plate);border-radius:10px;padding:8px;
+  background-image:radial-gradient(circle at 10px 10px,var(--plate-dot) 4px,transparent 4.5px);background-size:20px 20px}
+.board svg{display:block;width:100%;height:auto;max-height:340px}
+.next{display:flex;align-items:center;gap:10px;min-height:44px;font-size:1rem}
+.next .tag{font-weight:700}
+.tray{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.pick{font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:8px;padding:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;transition:transform .08s,border-color .15s}
+.pick:hover:not(:disabled){border-color:var(--ink)}
+.pick:active:not(:disabled){transform:scale(.96)}
+.pick:disabled{cursor:not-allowed;opacity:.55}
+.pick svg{width:100%;height:46px}
+.pick span{font-size:.78rem;line-height:1.2;text-align:center}
+.pick.wrong{border-color:var(--bad);background:var(--bad-soft);animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.btn{font:700 1rem var(--f-body);padding:10px 16px;border-radius:8px;border:2px solid var(--ink);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.done{background:var(--good-soft);border:2px solid var(--good);border-radius:8px;padding:12px 14px}
+.pulse{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+/* redesign */
+.redesign{position:relative}
+.score{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--ink);color:var(--card);border-radius:10px;padding:12px 16px;display:grid;grid-template-columns:1.5fr repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:680px){.score{grid-template-columns:repeat(2,minmax(0,1fr))}.score .main{grid-column:1/-1}}
+.score span{display:flex;flex-direction:column;min-width:0}
+.score .label{color:var(--card);opacity:.75;font-size:.72rem}
+.score .v{font:700 1.3rem var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.score .main .v{font-size:1.7rem;color:var(--accent)}
+.score .d{font:500 .76rem var(--f-mono);opacity:.85;white-space:nowrap}
+.stars{position:relative;display:inline-block;font-size:1.25rem;letter-spacing:2px;line-height:1.2;color:rgba(255,255,255,.25)}
+.stars i{position:absolute;inset:0 auto 0 0;overflow:hidden;white-space:nowrap;font-style:normal;color:var(--star)}
+.preview{background:var(--plate);border-radius:10px;padding:8px;background-image:radial-gradient(circle at 10px 10px,var(--plate-dot) 4px,transparent 4.5px);background-size:20px 20px}
+.preview svg{display:block;width:100%;height:auto;max-height:280px}
+.moves{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.moves{grid-template-columns:1fr}}
+.move{display:flex;flex-direction:column;gap:8px;background:var(--card);border:2px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;min-width:0;transition:border-color .15s,background .15s}
+.move:hover{border-color:var(--ink)}
+.move.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--card))}
+.move .row{display:flex;gap:10px;align-items:flex-start}
+.move input{width:20px;height:20px;margin-top:3px;flex:none;accent-color:var(--accent);cursor:pointer}
+.move p{font-size:.92rem;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:700 .76rem var(--f-mono);padding:3px 8px;border-radius:999px;background:var(--plate);white-space:nowrap}
+.chip.cost{background:var(--warn-soft);color:var(--warn)}
+.chip.free{background:var(--good-soft);color:var(--good)}
+.chip.fun{background:var(--bad-soft);color:var(--bad)}
+.move:focus-within,.btn:focus-visible,.pick:focus-visible,input[type=text]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.alert{border-radius:8px;padding:12px 14px;border:2px solid;color:var(--ink)}
+.alert.bad{background:var(--bad-soft);border-color:var(--bad)}
+.hint{font-size:.9rem;background:var(--plate);border-radius:8px;padding:10px 12px}
+
+/* report */
+.report{border:3px solid var(--ink);border-radius:12px;background:var(--card);padding:20px;display:flex;flex-direction:column;gap:14px}
+.rhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center}
+.stamp{font:800 1.1rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border:3px solid;border-radius:6px;transform:rotate(-3deg)}
+.stamp.ok{color:var(--good)} .stamp.no{color:var(--bad)} .stamp.wait{color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px}
+.field input{font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:min(340px,100%)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;color:var(--muted)}
+td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--f-body)}
+.better{color:var(--good);font-weight:700}
+.worse{color:var(--bad);font-weight:700}
+details{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+summary{cursor:pointer;font-weight:700}
+dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+dt{font-weight:700} dd{margin:0;color:var(--muted)}
+@media (max-width:520px){dl{grid-template-columns:1fr}dd{margin-bottom:6px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="text">
+      <div class="label">Design for Manufacturing game</div>
+      <h1>Rocket Racer Redesign</h1>
+      <p>Studworks Toys sells the <b>Rocket Racer</b>, a toy car built from bricks. The factory builds every car by hand before it is boxed. You are the new product manager. Make the car <b>cheaper to build</b> without making it boring for kids.</p>
+      <p class="idea"><b>The big idea:</b> every extra piece costs worker time, and every different <i>kind</i> of piece needs its own mold, storage bin, and spot on the shelf. Fewer pieces and fewer kinds of pieces make a product cheaper to make.</p>
+      <p class="fact">True story: in the early 2000s, a famous toy-brick maker almost went bankrupt. One reason was that the number of different pieces it made had roughly doubled in a few years. Cutting them back was part of how it recovered.</p>
+    </div>
+    <div class="board"><svg id="hero-car" viewBox="20 40 360 216" role="img" aria-label="The Rocket Racer toy car built from bricks"></svg></div>
+  </header>
+
+  <section class="card">
+    <div class="step"><b>1</b><h2>Build the original car</h2></div>
+    <p class="muted">You're a factory worker now. Press <b>Start</b>, then click the piece that matches the flashing outline on the car. The clock is running, and wrong picks are counted. Look carefully: many pieces look alike!</p>
+    <div class="station" id="st1"></div>
+  </section>
+
+  <section class="card redesign">
+    <div class="step"><b>2</b><h2>Redesign the car</h2></div>
+    <p class="muted">Now you're the product manager. Tick changes to make the car easier to build. Watch the car and the scoreboard change. Your goal is the highest <b>total profit</b>.</p>
+    <div class="score" aria-live="polite">
+      <span class="main"><span class="label">Total profit</span><span class="v" id="sc-profit"></span><span class="d" id="sc-profit-d"></span></span>
+      <span><span class="label">Pieces</span><span class="v" id="sc-pieces"></span><span class="d" id="sc-pieces-d"></span></span>
+      <span><span class="label">Kinds of pieces</span><span class="v" id="sc-types"></span><span class="d" id="sc-types-d"></span></span>
+      <span><span class="label">Fun for kids</span><span class="stars" aria-hidden="true">★★★★★<i id="sc-stars">★★★★★</i></span><span class="d" id="sc-fun"></span></span>
+      <span><span class="label">New molds</span><span class="v" id="sc-molds"></span><span class="d">paid once</span></span>
+    </div>
+    <p class="hint"><b>How profit works:</b> Studworks gets <b>$12</b> for every car sold and expects to sell <b>50,000</b>. Each piece costs about 6¢ of worker time, and each <i>kind</i> of piece costs 10¢ per car to store and handle. New molds cost money up front. And if the car gets less fun, fewer kids buy it.</p>
+    <div class="preview"><svg id="preview" viewBox="20 40 360 216" role="img" aria-label="Your redesigned car"></svg></div>
+    <div id="alerts"></div>
+    <div class="moves" id="moves"></div>
+  </section>
+
+  <section class="card">
+    <div class="step"><b>3</b><h2>Build your new design</h2></div>
+    <p class="muted">Back on the factory floor. Build your redesigned car and see how much faster it goes. If you change your design in Step 2, build it again here.</p>
+    <div class="station" id="st2"></div>
+  </section>
+
+  <section class="report">
+    <div class="rhead">
+      <div class="step"><b>4</b><h2>Your report card</h2></div>
+      <span id="stamp" class="stamp wait">In progress</span>
+    </div>
+    <p class="muted">Finish both builds, type your name, then take a screenshot of this box to submit.</p>
+    <div class="field">
+      <label class="label" for="student">Your name</label>
+      <input id="student" type="text" placeholder="First and last name" autocomplete="name">
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th>Original car</th><th>Your car</th><th>Change</th></tr></thead>
+        <tbody id="cmp"></tbody>
+      </table>
+    </div>
+    <p id="chosen" class="muted"></p>
+    <div><button class="btn" type="button" id="reset">Start the whole game over</button></div>
+  </section>
+
+  <details>
+    <summary>What do these words mean?</summary>
+    <dl>
+      <dt>Piece</dt><dd>One part a worker picks up and attaches. The original car has 46.</dd>
+      <dt>Kind of piece</dt><dd>A different shape or color. Two red 1×2 bricks are the same kind. A red 1×2 and a blue 1×2 are two kinds. Each kind needs its own mold, bin, and inventory count.</dd>
+      <dt>Mold</dt><dd>A steel tool that shapes plastic. A brand-new piece shape needs a new mold, paid for once before production.</dd>
+      <dt>Fun for kids</dt><dd>Customers buy brick toys to build them. If you glue too much together, the toy is cheaper to make but less fun, and fewer kids buy it.</dd>
+      <dt>Design for Manufacturing (DFM)</dt><dd>Designing a product from the start so it's easy and cheap to make, not just nice to use.</dd>
+    </dl>
+  </details>
+</div>
+
+<script>
+(function(){
+/* ---------- geometry ---------- */
+const S=20,BH=24,PH=8;
+const COL={red:'#d7372f',blue:'#2a62c9',yellow:'#f2c230',gray:'#9aa3ad',black:'#2c2e33',clear:'rgba(160,210,240,.55)'};
+const CNAME={red:'red',blue:'blue',yellow:'yellow',gray:'gray',black:'black',clear:'clear'};
+const SEAM='rgba(0,0,0,.38)';
+
+const CHANGES=[
+ {id:'long',name:'Use longer bricks',desc:'Build the body from long 1×4 bricks instead of many short ones. These bricks already exist, so no new mold.',mold:0,fun:0},
+ {id:'colors',name:'Use fewer colors',desc:'Make the whole body red. Fewer kinds of bricks to stock and fewer look-alikes to mix up.',mold:0,fun:-.5},
+ {id:'wheels',name:'One-piece wheels',desc:'Mold the tire, hub, and axle pin as a single wheel.',mold:12000,fun:0},
+ {id:'base',name:'One long base plate',desc:'Replace the 9 small gray plates under the car with one long plate.',mold:20000,fun:0},
+ {id:'spoiler',name:'Snap-on spoiler',desc:'The rear wing becomes one piece that snaps on.',mold:8000,fun:-.5},
+ {id:'shell',name:'One-piece cabin',desc:'Mold the whole driver cabin, windows and roof included, as one big piece.',mold:25000,fun:-1},
+ {id:'trap',name:'Mold the whole car as one piece',desc:'One piece, one mold, almost no building time. The cheapest car possible!',mold:40000,fun:0,trap:true}
+];
+
+function design(on){
+  if(on.has('trap'))return [{shape:'car',w:0,color:'red',x:0,y:0}];
+  const C=c=>on.has('colors')&&(c==='yellow'||c==='blue')?'red':c;
+  const P=[];
+  const row=(list,x,y,shape)=>{list.forEach(([w,c])=>{P.push({shape,w,color:C(c),x,y});x+=w*S;});};
+  if(on.has('base'))P.push({shape:'base',w:16,color:'gray',x:40,y:168});
+  else{row([[4,'gray'],[4,'gray'],[4,'gray'],[4,'gray']],40,176,'plate');row([[2,'gray'],[4,'gray'],[4,'gray'],[4,'gray'],[2,'gray']],40,168,'plate');}
+  [100,300].forEach(cx=>{
+    if(on.has('wheels'))P.push({shape:'wheel',w:0,color:'black',cx,cy:214});
+    else{P.push({shape:'tire',w:0,color:'black',cx,cy:214});P.push({shape:'hub',w:0,color:'gray',cx,cy:214});P.push({shape:'pin',w:0,color:'yellow',cx,cy:214});}
+  });
+  if(on.has('long')){row([[4,'red'],[4,'blue'],[4,'red'],[4,'blue']],40,144,'brick');row([[4,'blue'],[4,'red'],[4,'blue'],[2,'red']],60,120,'brick');}
+  else{row([[2,'red'],[1,'yellow'],[2,'red'],[3,'blue'],[2,'red'],[1,'yellow'],[3,'blue'],[2,'red']],40,144,'brick');
+       row([[1,'yellow'],[2,'red'],[3,'blue'],[2,'red'],[1,'yellow'],[3,'blue'],[2,'red']],60,120,'brick');}
+  if(on.has('shell'))P.push({shape:'shell',w:6,color:C('yellow'),x:140,y:64});
+  else{row([[1,'red'],[2,'clear'],[2,'clear'],[1,'red']],140,96,'brick');row([[1,'red'],[2,'clear'],[2,'clear'],[1,'red']],140,72,'brick');row([[2,'yellow'],[2,'yellow'],[2,'yellow']],140,64,'plate');}
+  if(on.has('spoiler'))P.push({shape:'spoiler',w:0,color:'black',x:280,y:78});
+  else{row([[1,'gray'],[1,'gray']],300,96,'brick');row([[4,'black']],280,88,'plate');P.push({shape:'round',w:1,color:C('yellow'),x:280,y:80});P.push({shape:'round',w:1,color:C('yellow'),x:340,y:80});}
+  P.forEach(p=>p.type=p.shape+'-'+p.w+'-'+p.color);
+  return P;
+}
+const ORIGINAL_PIECES=design(new Set());
+
+function label(p){
+  const c=CNAME[p.color];
+  switch(p.shape){
+    case 'brick':return `Brick 1×${p.w}, ${c}`;
+    case 'plate':return `Flat plate 1×${p.w}, ${c}`;
+    case 'round':return `Round cap, ${c}`;
+    case 'tire':return 'Tire';case 'hub':return 'Wheel hub';case 'pin':return 'Axle pin';
+    case 'wheel':return 'One-piece wheel';case 'base':return 'Long base plate';
+    case 'shell':return `Cabin shell, ${c}`;case 'spoiler':return 'Snap-on spoiler';case 'car':return 'Whole car';
+  }
+}
+function material(p){
+  switch(p.shape){
+    case 'brick':return p.color==='clear'?.05:.012*p.w+.01;
+    case 'plate':return .008*p.w+.006;case 'round':return .01;
+    case 'tire':return .06;case 'hub':return .03;case 'pin':return .01;
+    case 'wheel':return .10;case 'base':return .18;case 'shell':return .30;case 'spoiler':return .09;case 'car':return 1.40;
+  }
+}
+function studs(x,y,w,fill,stroke){let s='';for(let i=0;i<w;i++)s+=`<rect x="${x+i*S+4}" y="${y-4}" width="12" height="4" rx="1" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`;return s;}
+function shapeSVG(p,fill,stroke){
+  const f=fill||COL[p.color], s=stroke||SEAM;
+  switch(p.shape){
+    case 'brick':return `<rect x="${p.x}" y="${p.y}" width="${p.w*S}" height="${BH}" rx="2" fill="${f}" stroke="${s}" stroke-width="1.2"/>`+studs(p.x,p.y,p.w,f,s);
+    case 'plate':return `<rect x="${p.x}" y="${p.y}" width="${p.w*S}" height="${PH}" rx="1.5" fill="${f}" stroke="${s}" stroke-width="1.2"/>`+studs(p.x,p.y,p.w,f,s);
+    case 'base':return `<rect x="${p.x}" y="${p.y}" width="${16*S}" height="16" rx="2" fill="${f}" stroke="${s}" stroke-width="1.2"/>`+studs(p.x,p.y,16,f,s);
+    case 'round':return `<rect x="${p.x+1}" y="${p.y}" width="18" height="${PH}" rx="4" fill="${f}" stroke="${s}" stroke-width="1.2"/><rect x="${p.x+4}" y="${p.y-4}" width="12" height="4" rx="1" fill="${f}" stroke="${s}"/>`;
+    case 'tire':return `<circle cx="${p.cx}" cy="${p.cy}" r="30" fill="${fill||COL.black}" stroke="${s}" stroke-width="1.2"/><circle cx="${p.cx}" cy="${p.cy}" r="22" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="3"/>`;
+    case 'hub':return `<circle cx="${p.cx}" cy="${p.cy}" r="14" fill="${f}" stroke="${s}" stroke-width="1.2"/>`;
+    case 'pin':return `<circle cx="${p.cx}" cy="${p.cy}" r="5" fill="${f}" stroke="${s}" stroke-width="1.2"/>`;
+    case 'wheel':return `<circle cx="${p.cx}" cy="${p.cy}" r="30" fill="${fill||COL.black}" stroke="${s}" stroke-width="1.2"/><circle cx="${p.cx}" cy="${p.cy}" r="14" fill="${fill?fill:COL.gray}" stroke="none"/><circle cx="${p.cx}" cy="${p.cy}" r="5" fill="${fill?fill:COL.gray}" stroke="rgba(0,0,0,.25)"/>`;
+    case 'shell':return `<rect x="140" y="64" width="120" height="56" rx="3" fill="${f}" stroke="${s}" stroke-width="1.2"/>`+studs(140,64,6,f,s)+`<rect x="160" y="76" width="80" height="34" rx="3" fill="${fill?fill:COL.clear}" stroke="${fill?'none':'rgba(0,0,0,.25)'}"/>`;
+    case 'spoiler':return `<path d="M300 96h40v24h-40zM280 88h80v8h-80zM282 78h14v10h-14zM344 78h14v10h-14z" fill="${f}" stroke="${s}" stroke-width="1.2"/>`;
+    case 'car':return ORIGINAL_PIECES.map(q=>shapeSVG(q,fill||'#d7372f','none')).join('')+`<rect x="160" y="76" width="80" height="34" rx="3" fill="rgba(255,255,255,.18)"/>`;
+  }
+}
+function bbox(p){
+  switch(p.shape){
+    case 'brick':return [p.x,p.y-4,p.w*S,BH+4];case 'plate':return [p.x,p.y-4,p.w*S,PH+4];case 'base':return [p.x,p.y-4,320,20];
+    case 'round':return [p.x,p.y-4,20,12];
+    case 'tire':case 'wheel':return [p.cx-31,p.cy-31,62,62];case 'hub':return [p.cx-15,p.cy-15,30,30];case 'pin':return [p.cx-6,p.cy-6,12,12];
+    case 'shell':return [138,58,124,64];case 'spoiler':return [278,76,84,46];case 'car':return [30,56,340,192];
+  }
+}
+function thumb(p){
+  const [x,y,w,h]=bbox(p);const pad=4;
+  return `<svg viewBox="${x-pad} ${y-pad} ${w+pad*2} ${h+pad*2}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${shapeSVG(p)}</svg>`;
+}
+function carSVG(pieces,placed,nextIdx){
+  // draw in order: wheels first (behind), then the rest
+  const order=pieces.map((p,i)=>i).sort((a,b)=>(isWheel(pieces[b])-isWheel(pieces[a])));
+  let s='<line x1="20" y1="246" x2="380" y2="246" stroke="rgba(0,0,0,.18)" stroke-width="2"/>';
+  order.forEach(i=>{
+    const p=pieces[i];
+    if(placed===undefined||i<placed) s+=`<g>${shapeSVG(p)}</g>`;
+    else if(i===nextIdx) s+=`<g class="pulse">${shapeSVG(p,'rgba(255,255,255,.35)','#e0452f')}</g>`;
+    else s+=`<g opacity=".14">${shapeSVG(p,'#8a8f99','none')}</g>`;
+  });
+  return s;
+}
+function isWheel(p){return ['tire','hub','pin','wheel'].includes(p.shape)?1:0;}
+
+/* ---------- economics ---------- */
+const PRICE=12, MARKET=50000, LABOR=.06, PER_TYPE=.10;
+function econ(on){
+  const pieces=design(on);
+  const types=new Set(pieces.map(p=>p.type)).size;
+  let fun=5,mold=0;
+  CHANGES.forEach(c=>{if(on.has(c.id)){mold+=c.mold;fun+=c.fun;}});
+  if(on.has('trap')){fun=.5;mold=CHANGES.find(c=>c.trap).mold;}
+  const mat=pieces.reduce((a,p)=>a+material(p),0);
+  const unitCost=mat+pieces.length*LABOR+types*PER_TYPE;
+  const share=Math.max(.05,1-.1*Math.pow(5-fun,2));
+  const sold=Math.round(MARKET*share);
+  const profit=sold*(PRICE-unitCost)-mold;
+  return {pieces,count:pieces.length,types,fun,mold,unitCost,sold,profit,trap:on.has('trap')};
+}
+
+/* ---------- state ---------- */
+const $=id=>document.getElementById(id);
+const money=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US');
+const state={on:new Set(),r1:null,r2:null};
+
+/* ---------- build station ---------- */
+function makeStation(root,round){
+  const st={pieces:[],idx:0,errors:0,t0:0,elapsed:0,timer:null,running:false,done:false};
+  root.innerHTML=`
+    <div class="st-top">
+      <div class="st-stats">
+        <span><span class="label">Time</span><span class="v" data-k="time">0.0 s</span></span>
+        <span><span class="label">Pieces placed</span><span class="v" data-k="count">0 / 0</span></span>
+        <span><span class="label">Wrong picks</span><span class="v" data-k="err">0</span></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn go" type="button" data-k="start">Start building</button>
+        <button class="btn" type="button" data-k="restart">Restart</button>
+      </div>
+    </div>
+    <div class="board"><svg viewBox="20 40 360 216" data-k="svg" role="img" aria-label="Car being built"></svg></div>
+    <div class="next" data-k="next"></div>
+    <div class="tray" data-k="tray"></div>
+    <div data-k="result"></div>`;
+  const q=k=>root.querySelector(`[data-k="${k}"]`);
+  function load(){
+    stop();
+    st.pieces=round===1?ORIGINAL_PIECES:design(state.on);
+    st.idx=0;st.errors=0;st.elapsed=0;st.done=false;st.running=false;
+    const types=[...new Map(st.pieces.map(p=>[p.type,p])).values()]
+      .sort((a,b)=>a.shape.localeCompare(b.shape)||a.w-b.w||a.color.localeCompare(b.color));
+    q('tray').innerHTML=types.map(p=>`<button type="button" class="pick" data-type="${p.type}" disabled>${thumb(p)}<span>${label(p)}</span></button>`).join('');
+    q('tray').querySelectorAll('.pick').forEach(b=>b.addEventListener('click',()=>pick(b)));
+    q('result').innerHTML='';
+    q('start').disabled=false;q('start').textContent='Start building';
+    draw();
+  }
+  function draw(){
+    q('svg').innerHTML=carSVG(st.pieces,st.idx,st.running?st.idx:-1);
+    q('time').textContent=st.elapsed.toFixed(1)+' s';
+    q('count').textContent=st.idx+' / '+st.pieces.length;
+    q('err').textContent=st.errors;
+    if(st.running&&st.idx<st.pieces.length){
+      q('next').innerHTML=`<span class="muted">Find the piece for the flashing outline. ${st.pieces.length-st.idx} to go.</span>`;
+    }else if(!st.done){
+      q('next').innerHTML=`<span class="muted">This car has <b>${st.pieces.length}</b> pieces of <b>${new Set(st.pieces.map(p=>p.type)).size}</b> different kinds. Press Start when you're ready.</span>`;
+    }else q('next').innerHTML='';
+  }
+  function tick(){st.elapsed=(performance.now()-st.t0)/1000;q('time').textContent=st.elapsed.toFixed(1)+' s';}
+  function stop(){if(st.timer){clearInterval(st.timer);st.timer=null;}}
+  function start(){
+    if(st.running)return;
+    if(st.done)load();
+    st.running=true;st.t0=performance.now();st.timer=setInterval(tick,100);
+    q('tray').querySelectorAll('.pick').forEach(b=>b.disabled=false);
+    q('start').disabled=true;draw();
+  }
+  function pick(b){
+    if(!st.running)return;
+    const need=st.pieces[st.idx];
+    if(b.dataset.type===need.type){
+      st.idx++;
+      if(st.idx>=st.pieces.length)finish();
+      draw();
+    }else{
+      st.errors++;q('err').textContent=st.errors;
+      b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+      setTimeout(()=>b.classList.remove('wrong'),400);
+    }
+  }
+  function finish(){
+    tick();stop();st.running=false;st.done=true;
+    q('tray').querySelectorAll('.pick').forEach(b=>b.disabled=true);
+    q('start').disabled=false;q('start').textContent='Build again';
+    const res={time:st.elapsed,errors:st.errors,count:st.pieces.length};
+    if(round===1)state.r1=res;else{state.r2=res;state.r2design=[...state.on].sort().join(',');}
+    q('result').innerHTML=`<div class="done"><b>Car finished!</b> ${res.count} pieces in <b>${res.time.toFixed(1)} seconds</b> with <b>${res.errors}</b> wrong pick${res.errors===1?'':'s'}. ${round===1?'Now go to Step 2 and make it easier to build.':'Compare this with your Step 1 time in the report card.'}</div>`;
+    renderReport();
+  }
+  q('start').addEventListener('click',start);
+  q('restart').addEventListener('click',()=>{load();});
+  load();
+  return {load,isRunning:()=>st.running};
+}
+
+/* ---------- redesign ---------- */
+function renderMoves(){
+  const base=econ(new Set());
+  $('moves').innerHTML='';
+  CHANGES.forEach(c=>{
+    const e=econ(new Set([c.id]));
+    const chips=[];
+    if(!c.trap){
+      if(base.count-e.count>0)chips.push(`<span class="chip">−${base.count-e.count} pieces</span>`);
+      if(base.types-e.types>0)chips.push(`<span class="chip">−${base.types-e.types} kinds</span>`);
+      else if(base.types-e.types<0)chips.push(`<span class="chip">+${e.types-base.types} kinds</span>`);
+    }else chips.push(`<span class="chip">Only 1 piece</span>`);
+    chips.push(c.mold?`<span class="chip cost">New mold ${money(c.mold)}</span>`:`<span class="chip free">No new mold</span>`);
+    if(c.fun<0)chips.push(`<span class="chip fun">Fun ${c.fun}★</span>`);
+    const lab=document.createElement('label');lab.className='move';lab.htmlFor='mv-'+c.id;
+    lab.innerHTML=`<div class="row"><input type="checkbox" id="mv-${c.id}"><div style="min-width:0"><h3>${c.name}</h3><p>${c.desc}</p></div></div><div class="chips">${chips.join('')}</div>`;
+    const cb=lab.querySelector('input');
+    cb.addEventListener('change',()=>{cb.checked?state.on.add(c.id):state.on.delete(c.id);onDesignChange();});
+    $('moves').appendChild(lab);
+  });
+}
+function renderScore(){
+  const e=econ(state.on),o=econ(new Set());
+  CHANGES.forEach(c=>{const cb=$('mv-'+c.id);cb.checked=state.on.has(c.id);cb.closest('.move').classList.toggle('on',cb.checked);});
+  $('sc-profit').textContent=money(e.profit);
+  const d=e.profit-o.profit;
+  $('sc-profit-d').textContent=Math.abs(d)<1?'same as original':(d>0?'+':'−')+money(Math.abs(d)).replace('−','')+' vs original · '+e.sold.toLocaleString()+' sold';
+  $('sc-pieces').textContent=e.count;$('sc-pieces-d').textContent='was '+o.count;
+  $('sc-types').textContent=e.types;$('sc-types-d').textContent='was '+o.types;
+  $('sc-stars').style.width=(e.fun/5*100)+'%';
+  $('sc-fun').textContent=e.fun.toFixed(1)+' of 5';
+  $('sc-molds').textContent=money(e.mold);
+  $('preview').innerHTML=carSVG(e.pieces);
+  $('alerts').innerHTML=e.trap?`<div class="alert bad"><b>Nobody wants to buy it.</b> Kids buy brick sets because they get to build them. A car molded in one piece is just a plastic car, so fun drops to half a star and sales collapse. Cheapest to make is not the same as best for the business. Untick this card.</div>`:'';
+}
+let st1,st2;
+function onDesignChange(){
+  renderScore();
+  if(state.r2&&state.r2design!==[...state.on].sort().join(','))state.r2=null;
+  st2.load();
+  renderReport();
+}
+
+/* ---------- report ---------- */
+function renderReport(){
+  const e=econ(state.on),o=econ(new Set());
+  const t=v=>v==null?'not built yet':v.time.toFixed(1)+' s';
+  const er=v=>v==null?'–':String(v.errors);
+  const rows=[
+    ['Total profit',money(o.profit),money(e.profit),e.profit-o.profit,money(Math.abs(e.profit-o.profit)),true],
+    ['Pieces per car',o.count,e.count,e.count-o.count,String(Math.abs(e.count-o.count)),false],
+    ['Kinds of pieces',o.types,e.types,e.types-o.types,String(Math.abs(e.types-o.types)),false],
+    ['Fun for kids (out of 5)',o.fun.toFixed(1),e.fun.toFixed(1),e.fun-o.fun,Math.abs(e.fun-o.fun).toFixed(1),true],
+    ['Cars sold',o.sold.toLocaleString(),e.sold.toLocaleString(),e.sold-o.sold,Math.abs(e.sold-o.sold).toLocaleString(),true],
+    ['New molds bought',money(0),money(e.mold),0,'',null],
+    ['Your build time',t(state.r1),t(state.r2),(state.r1&&state.r2)?state.r2.time-state.r1.time:0,(state.r1&&state.r2)?Math.abs(state.r2.time-state.r1.time).toFixed(1)+' s':'',false],
+    ['Your wrong picks',er(state.r1),er(state.r2),(state.r1&&state.r2)?state.r2.errors-state.r1.errors:0,(state.r1&&state.r2)?String(Math.abs(state.r2.errors-state.r1.errors)):'',false]
+  ];
+  $('cmp').innerHTML=rows.map(([l,a,b,d,abs,higherBetter])=>{
+    let cls='',txt=abs===''?'':'no change';
+    if(abs!==''&&Math.abs(d)>1e-9){txt=(d>0?'+':'−')+abs.replace('−','');if(higherBetter!==null)cls=(higherBetter?d>0:d<0)?'better':'worse';}
+    if(abs==='')txt='';
+    return `<tr><td>${l}</td><td>${a}</td><td>${b}</td><td class="${cls}">${txt}</td></tr>`;}).join('');
+  const names=CHANGES.filter(c=>state.on.has(c.id)).map(c=>c.name);
+  $('chosen').innerHTML='<b>Changes chosen:</b> '+(names.length?names.join(', '):'none yet');
+  const s=$('stamp');
+  if(e.trap){s.className='stamp no';s.textContent='Nobody buys it';}
+  else if(!state.r1||!state.r2){s.className='stamp wait';s.textContent='Finish both builds';}
+  else if(e.profit>o.profit){s.className='stamp ok';s.textContent='Approved';}
+  else{s.className='stamp no';s.textContent='Less profit';}
+}
+
+$('reset').addEventListener('click',()=>{state.on.clear();state.r1=null;state.r2=null;renderScore();st1.load();st2.load();renderReport();window.scrollTo({top:0,behavior:'smooth'});});
+
+$('hero-car').innerHTML=carSVG(ORIGINAL_PIECES);
+renderMoves();
+st1=makeStation($('st1'),1);
+st2=makeStation($('st2'),2);
+renderScore();renderReport();
+})();
+</script>
+</body>
+</html>
